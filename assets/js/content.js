@@ -17,15 +17,16 @@ window.BISA_CONTENT = {
     email:     "berkeleybisa@gmail.com"
   },
 
-  /* The events shown big at the top of the Events page, in order.
+  /* The events shown big at the top of the Events page, in order. Pick ones that show different sides of BISA.
      "event" is the img name of an event in the list below; its name and year come from there.
-     "photo" is the file in assets/img to show. Use one at least 1400px wide, smaller ones look soft at this size.
-     "pillar" and "pillarEn" are the small label above the name. "title" is optional, for a shorter name. */
+     "photo" is the file in assets/img to show, about 1920px wide. The hl- files are the repo's photos enlarged
+     and sharpened; replace them with the original full-size photos when you have them.
+     "tag" and "tagEn" are the small label above the name. "title" is optional, for a shorter name. */
   highlights: [
-    { event: "ev-nusantara-2022", photo: "nus-2022", pillar: "Budaya", pillarEn: "Culture" },
-    { event: "ev-fall-welcoming-2022", photo: "about-drone", pillar: "Komunitas", pillarEn: "Community" },
-    { event: "ev-nusantara-2018", photo: "nus-tug", pillar: "Budaya", pillarEn: "Culture" },
-    { event: "ev-welcoming-event-2017", photo: "about-kitabisa", pillar: "Komunitas", pillarEn: "Community" }
+    { event: "ev-nusantara-2022", photo: "hl-nusantara-2022", tag: "Budaya", tagEn: "Culture" },
+    { event: "ev-fall-welcoming-2022", photo: "hl-fall-welcoming-2022", tag: "Komunitas", tagEn: "Community" },
+    { event: "ev-fall-retreat-2019", photo: "hl-fall-retreat-2019", tag: "Jalan-jalan", tagEn: "Retreat" },
+    { event: "ev-bisa-basketball-3x3-2019", photo: "hl-basketball-3x3-2019", title: "Basketball 3x3", tag: "Olahraga", tagEn: "Sports" }
   ],
 
   /* Newest first. Add a new event at the top. */

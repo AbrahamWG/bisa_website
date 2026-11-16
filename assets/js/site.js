@@ -35,41 +35,49 @@
 
   /* ---------------------------------------------------------------- events: highlights */
   /* A few events shown big at the top of the Events page, picked in content.js under "highlights". The section
-     pins and the scroll steps through them: the title rolls out and in, and the next photo wipes up over the last.
-     With reduced motion, or on very short screens, it stays a plain list. */
+     pins and the scroll steps through them: the title rolls out and in, and the next photo breaks through the
+     last as a field of gold-edged dots. Without WebGL the photo wipes up instead. With reduced motion, or on
+     very short screens, it stays a plain list. */
   function highlights() {
     const sec = $('.hl'), list = $('#hl-items'), rail = $('#hl-rail'), E = C.events || [];
     if (!sec || !list || !rail) return;
-    const track = $('.hl__track', sec), stick = $('.hl__stick', sec);
+    const track = $('.hl__track', sec), stick = $('.hl__stick', sec), grid = $('.hl__grid', sec), cv = $('.hl__canvas', sec);
     const data = (C.highlights || []).map(h => { const i = E.findIndex(e => e.img === h.event); return i < 0 ? null : { ...h, e: E[i] }; }).filter(Boolean);
     if (!data.length) { sec.remove(); return; }
     const n2 = n => String(n).padStart(2, '0'), word = x => `<span class="hl__w"><span>${esc(x)}</span></span>`;
     list.innerHTML = data.map((d, n) => `
       <li class="hl__item">
         <div class="hl__copy">
-          <p class="eyebrow"><i>${esc(d.pillar || 'Acara')}</i>${d.pillarEn ? `<span>${esc(d.pillarEn)}</span>` : ''}</p>
+          <p class="eyebrow"><i>${esc(d.tag || 'Acara')}</i>${d.tagEn ? `<span>${esc(d.tagEn)}</span>` : ''}</p>
           <h3 class="hl__title">${(d.title || d.e.name).split(/\s+/).filter(Boolean).map(word).join(' ')} <em>${word(d.e.year)}</em></h3>
         </div>
         <div class="hl__ph"><img src="${img(d.photo || d.e.img)}"${n ? ' loading="lazy"' : ''} alt="${esc(d.e.name)}, ${d.e.year}"></div>
       </li>`).join('');
     rail.innerHTML = data.map((d, n) => `<li><button class="mono" type="button" data-n="${n}" aria-label="Highlight ${n + 1} of ${data.length}: ${esc(d.e.name)}, ${d.e.year}"><i><b></b></i>${n2(n + 1)}</button></li>`).join('');
 
-    const items = $$('.hl__item', list), tabs = $$('button', rail), N = items.length;
+    const items = $$('.hl__item', list), phs = items.map(it => $('.hl__ph', it)), tabs = $$('button', rail), N = items.length;
+    const glx = RM || !cv ? null : dots(cv, phs.map(p => $('img', p)));
     const mq = matchMedia('(min-height: 480px)');
     const io = t => t * t * (3 - 2 * t);
     let pin = false, step = 1, f = -1, drawn = -1, cur = -1;
 
     const setup = () => {
       pin = !RM && mq.matches;
-      sec.classList.toggle('hl--pin', pin);
+      sec.classList.toggle('hl--pin', pin); sec.classList.toggle('hl--gl', pin && !!glx);
       f = drawn = cur = -1;
       if (!pin) { track.style.removeProperty('--h'); items.forEach(it => it.removeAttribute('style')); return; }
       $$('img', list).forEach(im => { im.loading = 'eager'; });
       const H = stick.clientHeight;
       step = H * .85;   // scroll distance per highlight
       track.style.setProperty('--h', Math.round((N - 1) * step + H * 1.25) + 'px');
+      if (glx) {   // lay the canvas exactly over the photo frame
+        const a = phs[0].getBoundingClientRect(), g = grid.getBoundingClientRect();
+        Object.assign(cv.style, { left: a.left - g.left + 'px', top: a.top - g.top + 'px', width: a.width + 'px', height: a.height + 'px' });
+        glx.size(a.width, a.height);
+      }
     };
     setup(); addEventListener('resize', setup); mq.addEventListener('change', setup);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(setup);
 
     rail.addEventListener('click', ev => {
       const bt = ev.target.closest('button'); if (!bt || !pin) return;
@@ -82,7 +90,7 @@
       if (r.bottom < -100 || r.top > innerHeight + 100) return;
       const target = clamp(-r.top / step, 0, N - 1);
       f = f < 0 ? target : lerp(f, target, .1); if (Math.abs(f - target) < .0004) f = target;
-      if (f === drawn) return; drawn = f;
+      if (f === drawn && !(glx && glx.fresh())) return; drawn = f;
 
       // k is the highlight on screen, t is how far the next one has come in. Each one rests before it moves
       const k = Math.min(N - 1, Math.floor(f)), t = k >= N - 1 ? 0 : io(clamp((f - k - .16) / .68));
@@ -92,13 +100,94 @@
         if (!out && !inc) return;
         s.setProperty('--y', (out ? -112 * io(clamp(t / .55)) : 112 * (1 - io(clamp((t - .35) / .65)))).toFixed(2) + '%');   // title rolls up and out, then the next rolls in
         s.setProperty('--o', (out ? 1 - clamp(t / .4) : clamp((t - .6) / .4)).toFixed(3));                                  // small label fades
-        s.setProperty('--c', (out ? 0 : (1 - t) * 100).toFixed(2) + '%');                                                   // photo wipes up from the bottom
-        s.setProperty('--s', (out ? -12 * t : 16 * (1 - t)).toFixed(2) + '%');                                              // both photos travel a little with the wipe
+        if (glx) return;
+        s.setProperty('--c', (out ? 0 : (1 - t) * 100).toFixed(2) + '%');                                                   // no WebGL: photo wipes up from the bottom
+        s.setProperty('--s', (out ? -12 * t : 16 * (1 - t)).toFixed(2) + '%');                                              // and both photos travel a little with the wipe
       });
+      if (glx) glx.draw(k, Math.min(k + 1, N - 1), t, .012 * t, -.014 * (1 - t));   // dots carry the next photo in; both drift a touch
       const on = t > .5 ? k + 1 : k;
       if (on !== cur) { cur = on; tabs.forEach((bt, n) => bt.setAttribute('aria-current', n === on ? 'true' : 'false')); }
       tabs.forEach((bt, n) => bt.style.setProperty('--p', clamp(f - n + 1).toFixed(3)));
     });
+  }
+
+  /* WebGL for the highlights photo. Draws photo A and lets photo B through a grid of dots that grow from the
+     bottom edge upward until they merge, each with a gold edge: a nod to the dots on the home page.
+     Returns null if WebGL is missing, and the photos wipe with CSS instead. */
+  function dots(cv, imgs) {
+    const gl = cv && cv.getContext('webgl', { alpha: false, antialias: false, powerPreference: 'high-performance' });
+    if (!gl) return null;
+    const VS = `attribute vec2 p; varying vec2 v; void main(){ v = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
+    const FS = `
+      precision mediump float;
+      varying vec2 v;
+      uniform sampler2D uA, uB;
+      uniform vec2 uRes, uRA, uRB;   // canvas size and the two photo sizes, in pixels
+      uniform float uYA, uYB;        // how far each photo has drifted up or down
+      uniform float uT, uCell;       // transition 0..1 and dot spacing in pixels
+      vec3 photo(sampler2D s, vec2 r, float dy, vec2 uv){
+        float ca = uRes.x / uRes.y, ia = r.x / r.y;
+        vec2 sc = ca > ia ? vec2(1., ia / ca) : vec2(ca / ia, 1.);   // cover the canvas, like object-fit
+        return texture2D(s, (uv - .5) * sc / 1.04 + .5 + vec2(0., dy)).rgb;
+      }
+      void main(){
+        vec2 uv = vec2(v.x, 1. - v.y);
+        vec3 col = photo(uA, uRA, uYA, uv);
+        if (uT > 0.) {
+          vec2 px = uv * uRes, cell = floor(px / uCell), c = (cell + .5) * uCell;
+          float d = length(px - c) / uCell;
+          float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+          float t = clamp(uT * 2. - (1. - c.y / uRes.y) * .86 - h * .14, 0., 1.);
+          float r = t * .8;
+          float m = (1. - smoothstep(r - .035, r + .035, d)) * step(.002, t);
+          float rim = smoothstep(r - .18, r, d) * m * (1. - t);
+          col = mix(col, photo(uB, uRB, uYB, uv), m);
+          col = mix(col, vec3(.992, .718, .098), rim * .75);
+        }
+        gl_FragColor = vec4(col, 1.);
+      }`;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = {}; ['uA', 'uB', 'uRes', 'uRA', 'uRB', 'uYA', 'uYB', 'uT', 'uCell'].forEach(n => { U[n] = gl.getUniformLocation(pr, n); });
+    const mk = () => {
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, val]) => gl.texParameteri(gl.TEXTURE_2D, k, val));
+      return t;
+    };
+    // A photo shows as flat indigo until it has loaded
+    const blank = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([20, 28, 74, 255]));
+    const tex = imgs.map(() => blank), dim = imgs.map(() => [3, 2]);
+    let dirty = true;
+    imgs.forEach((im, n) => {
+      const up = () => {
+        if (!im.naturalWidth) return;
+        try { const t = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); tex[n] = t; dim[n] = [im.naturalWidth, im.naturalHeight]; dirty = true; } catch (e) { /* keep the flat colour */ }
+      };
+      im.loading = 'eager';
+      if (im.complete) up(); else im.addEventListener('load', up, { once: true });
+    });
+    return {
+      // true once after a photo finishes loading, so the caller knows to redraw
+      fresh() { const d = dirty; dirty = false; return d; },
+      size(w, h) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform1f(U.uCell, clamp(w / 58, 9, 18) * dpr);
+        dirty = true;
+      },
+      draw(ia, ib, t, ya, yb) {
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[ia]); gl.uniform1i(U.uA, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[ib]); gl.uniform1i(U.uB, 1);
+        gl.uniform2f(U.uRA, dim[ia][0], dim[ia][1]); gl.uniform2f(U.uRB, dim[ib][0], dim[ib][1]);
+        gl.uniform1f(U.uYA, ya); gl.uniform1f(U.uYB, yb); gl.uniform1f(U.uT, t);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    };
   }
 
   /* ---------------------------------------------------------------- events: archive */
