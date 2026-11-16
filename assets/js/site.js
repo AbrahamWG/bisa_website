@@ -318,7 +318,7 @@
   function nav() {
     const bar = $('#nav'), menu = $('#menu'), tog = $('#menu-toggle');
     let open = false;
-    const set = v => { open = v; menu.hidden = !v; tog.setAttribute('aria-expanded', v); $('span', tog).textContent = v ? 'Close' : 'Menu'; document.body.style.overflow = v ? 'hidden' : ''; };
+    const set = v => { open = v; menu.hidden = !v; tog.setAttribute('aria-expanded', v); tog.setAttribute('aria-label', v ? 'Close menu' : 'Open menu'); document.body.style.overflow = v ? 'hidden' : ''; };
     tog.addEventListener('click', () => set(!open));
     menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
     addEventListener('keydown', e => { if (e.key === 'Escape' && open) set(false); });
