@@ -34,180 +34,71 @@
   }
 
   /* ---------------------------------------------------------------- events: highlights */
-  /* A pinned stage at the top of the Events page. Scrolling grows the first photo out of its frame, then each
-     next photo breaks through as a field of dots. Without WebGL the photos cross-fade instead. With reduced
-     motion, or on very short screens, the highlights are a plain list. Content: "highlights" in content.js. */
+  /* A few events shown big at the top of the Events page, picked in content.js under "highlights". The section
+     pins and the scroll steps through them: the title rolls out and in, and the next photo wipes up over the last.
+     With reduced motion, or on very short screens, it stays a plain list. */
   function highlights() {
     const sec = $('.hl'), list = $('#hl-items'), rail = $('#hl-rail'), E = C.events || [];
     if (!sec || !list || !rail) return;
-    const data = (C.highlights || []).map(h => { const i = E.findIndex(e => e.img === h.event); return i < 0 ? null : { ...h, i, e: E[i] }; }).filter(Boolean);
+    const track = $('.hl__track', sec), stick = $('.hl__stick', sec);
+    const data = (C.highlights || []).map(h => { const i = E.findIndex(e => e.img === h.event); return i < 0 ? null : { ...h, e: E[i] }; }).filter(Boolean);
     if (!data.length) { sec.remove(); return; }
-    const n2 = n => String(n).padStart(2, '0');
-    // Each word rises on its own. The last word of a longer title is set in the italic serif
-    const title = s => {
-      const w = s.split(/\s+/).filter(Boolean), sp = (x, j) => `<span class="hl__w" style="--i:${j}"><span>${esc(x)}</span></span>`;
-      return w.map((x, j) => w.length > 1 && j === w.length - 1 ? `<em>${sp(x, j)}</em>` : sp(x, j)).join(' ');
-    };
+    const n2 = n => String(n).padStart(2, '0'), word = x => `<span class="hl__w"><span>${esc(x)}</span></span>`;
     list.innerHTML = data.map((d, n) => `
       <li class="hl__item">
-        <div class="hl__ph"><img src="${img(d.photo || d.e.img)}"${n ? ' loading="lazy"' : ''} alt="${esc(d.e.name)}, ${d.e.year}"></div>
-        <p class="hl__year" aria-hidden="true">${d.e.year}</p>
         <div class="hl__copy">
-          <p class="eyebrow hl__fade"><i>${esc(d.pillar || 'Acara')}</i><span>${d.pillarEn ? esc(d.pillarEn) + ' · ' : ''}${d.e.year}</span></p>
-          <h3 class="hl__title">${title(d.title || d.e.name)}</h3>
-          ${d.text ? `<p class="hl__text hl__fade">${esc(d.text)}</p>` : ''}
-          <p class="hl__open hl__fade"><button class="btn btn--line btn--sm" type="button" data-open="${d.i}">See the photo <svg aria-hidden="true"><use href="#i-arrow"/></svg></button></p>
+          <p class="eyebrow"><i>${esc(d.pillar || 'Acara')}</i>${d.pillarEn ? `<span>${esc(d.pillarEn)}</span>` : ''}</p>
+          <h3 class="hl__title">${(d.title || d.e.name).split(/\s+/).filter(Boolean).map(word).join(' ')} <em>${word(d.e.year)}</em></h3>
         </div>
+        <div class="hl__ph"><img src="${img(d.photo || d.e.img)}"${n ? ' loading="lazy"' : ''} alt="${esc(d.e.name)}, ${d.e.year}"></div>
       </li>`).join('');
-    rail.innerHTML = data.map((d, n) => `<li><button type="button" data-n="${n}" aria-label="Highlight ${n + 1} of ${data.length}: ${esc(d.e.name)}, ${d.e.year}"><i><b></b></i><span class="mono"><b>${n2(n + 1)}</b><span>${esc(d.title || d.e.name)}</span></span></button></li>`).join('');
+    rail.innerHTML = data.map((d, n) => `<li><button class="mono" type="button" data-n="${n}" aria-label="Highlight ${n + 1} of ${data.length}: ${esc(d.e.name)}, ${d.e.year}"><i><b></b></i>${n2(n + 1)}</button></li>`).join('');
 
-    const track = $('.hl__track', sec), stick = $('.hl__stick', sec), stage = $('.hl__stage', sec), intro = $('.hl__intro', sec), hint = $('.hl__hint', sec);
-    const items = $$('.hl__item', list), phs = items.map(it => $('.hl__ph', it)), tabs = $$('li', rail), N = items.length;
-    const glx = RM ? null : dots($('.hl__canvas', sec), phs.map(p => $('img', p)));
+    const items = $$('.hl__item', list), tabs = $$('button', rail), N = items.length;
     const mq = matchMedia('(min-height: 480px)');
     const io = t => t * t * (3 - 2 * t);
-    /* a: scroll spent growing the first photo. b: scroll per photo. tail: rest on the last photo before the page moves on. */
-    let pin = false, a = 1, b = 1, tail = 1, span = 1, cardTop = 0, gut = 16, y = -1, cur = -2;
-    const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    let pin = false, step = 1, f = -1, drawn = -1, cur = -1;
 
     const setup = () => {
       pin = !RM && mq.matches;
-      sec.classList.toggle('hl--pin', pin); sec.classList.toggle('hl--gl', pin && !!glx);
-      cur = -2;
-      if (!pin) {
-        track.style.removeProperty('--h'); stage.style.clipPath = '';
-        [intro, hint, rail].forEach(el => el.removeAttribute('style'));
-        phs.forEach(p => { p.style.opacity = ''; p._o = -1; });
-        return;
-      }
-      const W = stick.clientWidth, H = stick.clientHeight;
-      a = H * .7; b = H * .95; tail = H * .4; span = a + (N - 1) * b + tail;
-      track.style.setProperty('--h', Math.round(span + H) + 'px');
-      cardTop = intro.offsetHeight + 20; gut = parseFloat(getComputedStyle(intro).paddingLeft) || 16;
-      if (glx) glx.size(W, H);
+      sec.classList.toggle('hl--pin', pin);
+      f = drawn = cur = -1;
+      if (!pin) { track.style.removeProperty('--h'); items.forEach(it => it.removeAttribute('style')); return; }
+      $$('img', list).forEach(im => { im.loading = 'eager'; });
+      const H = stick.clientHeight;
+      step = H * .85;   // scroll distance per highlight
+      track.style.setProperty('--h', Math.round((N - 1) * step + H * 1.25) + 'px');
     };
     setup(); addEventListener('resize', setup); mq.addEventListener('change', setup);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(setup);
 
-    // The numbered bar across the top jumps to a highlight
     rail.addEventListener('click', ev => {
       const bt = ev.target.closest('button'); if (!bt || !pin) return;
-      const n = +bt.dataset.n;
-      scrollTo({ top: scrollY + track.getBoundingClientRect().top + (n ? a + (n - .1) * b : a), behavior: 'smooth' });
+      scrollTo({ top: scrollY + track.getBoundingClientRect().top + bt.dataset.n * step, behavior: 'smooth' });
     });
-    if (FINE) stick.addEventListener('pointermove', e => { mouse.tx = e.clientX / innerWidth * 2 - 1; mouse.ty = e.clientY / innerHeight * 2 - 1; });
 
     tasks.push(() => {
       if (!pin) return;
       const r = track.getBoundingClientRect();
       if (r.bottom < -100 || r.top > innerHeight + 100) return;
-      const target = clamp(-r.top, 0, span);
-      y = y < 0 ? target : lerp(y, target, .12); if (Math.abs(y - target) < .4) y = target;
+      const target = clamp(-r.top / step, 0, N - 1);
+      f = f < 0 ? target : lerp(f, target, .1); if (Math.abs(f - target) < .0004) f = target;
+      if (f === drawn) return; drawn = f;
 
-      // Opening move: the framed photo under the headline grows to fill the screen
-      const e0 = ss(0, a, y), k0 = 1 - e0;
-      stage.style.clipPath = k0 < .001 ? 'none' : `inset(${(cardTop * k0).toFixed(1)}px ${(gut * k0).toFixed(1)}px ${(56 * k0).toFixed(1)}px round ${(10 * k0).toFixed(1)}px)`;
-      intro.style.opacity = clamp(1 - e0 * 1.25).toFixed(3);
-      intro.style.transform = `translate3d(0,${(-cardTop * e0).toFixed(1)}px,0)`;   // the growing photo pushes the headline off the top
-      intro.style.visibility = e0 > .8 ? 'hidden' : 'visible';
-      hint.style.opacity = clamp(1 - e0 * 3).toFixed(3);
-      rail.style.opacity = ss(.55, 1, e0).toFixed(3); rail.style.visibility = e0 < .55 ? 'hidden' : 'visible';
-
-      // f counts photos scrolled past. k is the photo underneath, tr is how far the next one has broken through
-      const f = y <= a ? 0 : (y - a) / b, k = Math.min(N - 1, Math.floor(f));
-      const tr = k >= N - 1 ? 0 : io(clamp((f - k - .22) / .62));
-      const on = e0 < .82 ? -1 : tr > .5 ? k + 1 : k;
-      if (on !== cur) {
-        cur = on;
-        items.forEach((it, n) => it.classList.toggle('is-on', n === on));
-        tabs.forEach((li, n) => { li.classList.toggle('is-on', n === on); $('button', li).setAttribute('aria-current', n === on ? 'true' : 'false'); });
-      }
-      tabs.forEach((li, n) => { const s = n ? n - .47 : 0, e = n < N - 1 ? n + .53 : N - 1 + tail / b; li.style.setProperty('--p', clamp((f - s) / (e - s)).toFixed(3)); });
-
-      // Each photo drifts and settles a little for as long as it is on screen
-      mouse.x = lerp(mouse.x, mouse.tx, .06); mouse.y = lerp(mouse.y, mouse.ty, .06);
-      const view = n => { const life = n ? clamp((f - n + .78) / 1.8) : clamp(y / (a + b)); return [1.22 - .16 * life, mouse.x * .006, (.5 - life) * .03 + mouse.y * .006]; };
-      const nx = Math.min(k + 1, N - 1);
-      if (glx) glx.draw(k, nx, tr, view(k), view(nx), .3 + .7 * e0);
-      else phs.forEach((p, n) => { const o = n <= k ? 1 : n === k + 1 ? tr : 0; if (p._o !== o) { p._o = o; p.style.opacity = o.toFixed(3); } });
+      // k is the highlight on screen, t is how far the next one has come in. Each one rests before it moves
+      const k = Math.min(N - 1, Math.floor(f)), t = k >= N - 1 ? 0 : io(clamp((f - k - .16) / .68));
+      items.forEach((it, n) => {
+        const out = n === k, inc = n === k + 1, s = it.style;
+        s.visibility = out || inc && t > 0 ? 'visible' : 'hidden';
+        if (!out && !inc) return;
+        s.setProperty('--y', (out ? -112 * io(clamp(t / .55)) : 112 * (1 - io(clamp((t - .35) / .65)))).toFixed(2) + '%');   // title rolls up and out, then the next rolls in
+        s.setProperty('--o', (out ? 1 - clamp(t / .4) : clamp((t - .6) / .4)).toFixed(3));                                  // small label fades
+        s.setProperty('--c', (out ? 0 : (1 - t) * 100).toFixed(2) + '%');                                                   // photo wipes up from the bottom
+        s.setProperty('--s', (out ? -12 * t : 16 * (1 - t)).toFixed(2) + '%');                                              // both photos travel a little with the wipe
+      });
+      const on = t > .5 ? k + 1 : k;
+      if (on !== cur) { cur = on; tabs.forEach((bt, n) => bt.setAttribute('aria-current', n === on ? 'true' : 'false')); }
+      tabs.forEach((bt, n) => bt.style.setProperty('--p', clamp(f - n + 1).toFixed(3)));
     });
-  }
-
-  /* WebGL for the highlights stage. Draws photo A and lets photo B through a grid of dots that grow from the
-     bottom edge upward until they merge, a nod to the dots on the home page. Returns null if WebGL is missing. */
-  function dots(cv, imgs) {
-    const gl = cv && cv.getContext('webgl', { alpha: false, antialias: false, powerPreference: 'high-performance' });
-    if (!gl) return null;
-    const VS = `attribute vec2 p; varying vec2 v; void main(){ v = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
-    const FS = `
-      precision mediump float;
-      varying vec2 v;
-      uniform sampler2D uA, uB;
-      uniform vec2 uRes, uRA, uRB;   // canvas size and the two photo sizes, in pixels
-      uniform vec3 uVA, uVB;         // per photo: zoom, pan x, pan y
-      uniform float uT, uCell, uS;   // transition 0..1, dot spacing in pixels, strength of the dark gradient
-      vec3 photo(sampler2D s, vec2 r, vec3 view, vec2 uv){
-        float ca = uRes.x / uRes.y, ia = r.x / r.y;
-        vec2 sc = ca > ia ? vec2(1., ia / ca) : vec2(ca / ia, 1.);   // cover the canvas, like object-fit
-        return texture2D(s, (uv - .5) * sc / view.x + .5 + view.yz).rgb;
-      }
-      void main(){
-        vec2 uv = vec2(v.x, 1. - v.y);
-        vec3 col = photo(uA, uRA, uVA, uv);
-        if (uT > 0.) {
-          vec2 px = uv * uRes, cell = floor(px / uCell), c = (cell + .5) * uCell;
-          float d = length(px - c) / uCell;
-          float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
-          float t = clamp(uT * 2. - (1. - c.y / uRes.y) * .82 - h * .18, 0., 1.);
-          float r = t * .8;
-          float m = (1. - smoothstep(r - .04, r + .04, d)) * step(.002, t);
-          float rim = smoothstep(r - .16, r, d) * m * (1. - t);
-          col = mix(col, photo(uB, uRB, uVB, uv), m);
-          col = mix(col, vec3(.992, .718, .098), rim * .6);          // gold edge on the growing dots
-        }
-        // darken the bottom for the text and the top for the numbered bar
-        float s = smoothstep(.3, 1., uv.y) * .8 + (1. - smoothstep(0., .28, uv.y)) * .32;
-        gl_FragColor = vec4(mix(col, vec3(.027, .043, .141), clamp(s, 0., .88) * uS), 1.);
-      }`;
-    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-    const pr = gl.createProgram();
-    gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
-    gl.useProgram(pr);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const U = {}; ['uA', 'uB', 'uRes', 'uRA', 'uRB', 'uVA', 'uVB', 'uT', 'uCell', 'uS'].forEach(n => { U[n] = gl.getUniformLocation(pr, n); });
-    const mk = () => {
-      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-      [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, val]) => gl.texParameteri(gl.TEXTURE_2D, k, val));
-      return t;
-    };
-    // Photos show as flat indigo until they have loaded
-    const blank = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([12, 18, 54, 255]));
-    const tex = imgs.map(() => blank), dim = imgs.map(() => [3, 2]);
-    imgs.forEach((im, n) => {
-      const up = () => {
-        if (!im.naturalWidth) return;
-        try { const t = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); tex[n] = t; dim[n] = [im.naturalWidth, im.naturalHeight]; } catch (e) { /* keep the flat colour */ }
-      };
-      im.loading = 'eager';
-      if (im.complete) up(); else im.addEventListener('load', up, { once: true });
-    });
-    return {
-      size(w, h) {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-        gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform1f(U.uCell, clamp(w / 84, 9, 18) * dpr);
-      },
-      draw(ia, ib, t, va, vb, scrim) {
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[ia]); gl.uniform1i(U.uA, 0);
-        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[ib]); gl.uniform1i(U.uB, 1);
-        gl.uniform2f(U.uRA, dim[ia][0], dim[ia][1]); gl.uniform2f(U.uRB, dim[ib][0], dim[ib][1]);
-        gl.uniform3f(U.uVA, va[0], va[1], va[2]); gl.uniform3f(U.uVB, vb[0], vb[1], vb[2]);
-        gl.uniform1f(U.uT, t); gl.uniform1f(U.uS, scrim);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-      }
-    };
   }
 
   /* ---------------------------------------------------------------- events: archive */
@@ -232,7 +123,7 @@
     }).join('');
     yrs.innerHTML = years.map((y, i) => `<button class="yr" type="button" data-y="${y}" aria-pressed="${i === 0}" aria-label="${y}, ${evs(of(y).length)}"><b>${y}</b><sup class="mono" aria-hidden="true">${of(y).length}</sup></button>`).join('');
     const foot = $('#ar-foot');
-    if (foot) foot.textContent = `${evs(E.length)} on record, ${Math.min(...years)} to ${Math.max(...years)}`;
+    if (foot) foot.textContent = `${evs(E.length)}, ${Math.min(...years)} to ${Math.max(...years)}`;
 
     const marks = $$('.ar__mark', strip), btns = $$('.yr', yrs), cards = $$('.ar__card', strip), pics = cards.map(c => $('img', c));
     const bar = $('#ar-bar'), prev = $('#ar-prev'), next = $('#ar-next');

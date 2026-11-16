@@ -17,21 +17,15 @@ window.BISA_CONTENT = {
     email:     "berkeleybisa@gmail.com"
   },
 
-  /* The big highlights at the top of the Events page, in the order they appear.
+  /* The events shown big at the top of the Events page, in order.
      "event" is the img name of an event in the list below; its name and year come from there.
-     Optional: "title" for a shorter headline, "photo" for a different (ideally larger) file from assets/img,
-     "pillar" and "pillarEn" for the small label, "text" for the line under the headline. */
+     "photo" is the file in assets/img to show. Use one at least 1400px wide, smaller ones look soft at this size.
+     "pillar" and "pillarEn" are the small label above the name. "title" is optional, for a shorter name. */
   highlights: [
-    { event: "ev-nusantara-2022", photo: "nus-stage", pillar: "Budaya", pillarEn: "Culture",
-      text: "The largest annual Indonesian cultural event in the Bay Area. Traditional food, performances and games, free for everyone." },
-    { event: "ev-bisa-merdeka-fest-festival-of-freedom-2024", title: "Merdeka Fest", pillar: "Budaya", pillarEn: "Culture",
-      text: "Our Festival of Freedom, bringing Indonesian culture to Berkeley." },
-    { event: "ev-sri-mulyani-berkeley-2023", pillar: "Karier", pillarEn: "Career",
-      text: "One of the career events that help our members grow professionally." },
-    { event: "ev-fall-welcoming-2022", photo: "about-drone", pillar: "Komunitas", pillarEn: "Community",
-      text: "Where the semester starts. No application needed: show up and you are in." },
-    { event: "ev-fall-retreat-2019", pillar: "Komunitas", pillarEn: "Community",
-      text: "Time away from campus with the people who make Berkeley feel like home." }
+    { event: "ev-nusantara-2022", photo: "nus-2022", pillar: "Budaya", pillarEn: "Culture" },
+    { event: "ev-fall-welcoming-2022", photo: "about-drone", pillar: "Komunitas", pillarEn: "Community" },
+    { event: "ev-nusantara-2018", photo: "nus-tug", pillar: "Budaya", pillarEn: "Culture" },
+    { event: "ev-welcoming-event-2017", photo: "about-kitabisa", pillar: "Komunitas", pillarEn: "Community" }
   ],
 
   /* Newest first. Add a new event at the top. */
