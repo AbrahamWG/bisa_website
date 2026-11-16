@@ -18,6 +18,7 @@ Everything that changes often lives in `assets/js/content.js`:
 
 - `links`: intake form, Discord, Instagram, and the rest
 - `events`: newest first, add a new one at the top
+- `highlights`: the big events at the top of the Events page, each one points at an event
 - `team`: officers, roles, and photo names
 - `departments`, `faq`
 

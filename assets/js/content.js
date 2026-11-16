@@ -17,6 +17,23 @@ window.BISA_CONTENT = {
     email:     "berkeleybisa@gmail.com"
   },
 
+  /* The big highlights at the top of the Events page, in the order they appear.
+     "event" is the img name of an event in the list below; its name and year come from there.
+     Optional: "title" for a shorter headline, "photo" for a different (ideally larger) file from assets/img,
+     "pillar" and "pillarEn" for the small label, "text" for the line under the headline. */
+  highlights: [
+    { event: "ev-nusantara-2022", photo: "nus-stage", pillar: "Budaya", pillarEn: "Culture",
+      text: "The largest annual Indonesian cultural event in the Bay Area. Traditional food, performances and games, free for everyone." },
+    { event: "ev-bisa-merdeka-fest-festival-of-freedom-2024", title: "Merdeka Fest", pillar: "Budaya", pillarEn: "Culture",
+      text: "Our Festival of Freedom, bringing Indonesian culture to Berkeley." },
+    { event: "ev-sri-mulyani-berkeley-2023", pillar: "Karier", pillarEn: "Career",
+      text: "One of the career events that help our members grow professionally." },
+    { event: "ev-fall-welcoming-2022", photo: "about-drone", pillar: "Komunitas", pillarEn: "Community",
+      text: "Where the semester starts. No application needed: show up and you are in." },
+    { event: "ev-fall-retreat-2019", pillar: "Komunitas", pillarEn: "Community",
+      text: "Time away from campus with the people who make Berkeley feel like home." }
+  ],
+
   /* Newest first. Add a new event at the top. */
   events: [
     { year: 2024, name: "Midautumn Festival with SSA and MASA", img: "ev-midautumn-festival-with-ssa-and-masa-2024", w: 1000, h: 740 },

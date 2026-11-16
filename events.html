@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Events · BISA</title>
-<meta name="description" content="Past BISA events from 2017 to today.">
+<meta name="description" content="BISA event highlights and the full archive of past events, 2017 to today.">
 <meta name="theme-color" content="#070b24">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="preload" href="assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
@@ -13,24 +13,57 @@
 <link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body data-page="events">
-<!-- Events page: the archive of past events with year filters and photos -->
+<!-- Events page: scroll-driven highlights on top, then the full archive as a sideways strip with a year picker -->
 <script src="assets/js/layout.js"></script>
 
 <main id="top">
 
-<section class="band band--nila ev" id="events">
-  <div class="wrap">
-    <div class="ev__head">
-      <div>
-        <p class="eyebrow" data-reveal><i>Acara</i><span>Our past events</span></p>
-        <h2 class="h2" data-reveal>Every semester,<br>something to <em>show up for.</em></h2>
+<!-- Highlights: a pinned stage. Scrolling moves through the events listed under "highlights" in content.js -->
+<section class="hl band--nila" id="highlights" aria-label="Event highlights">
+  <div class="hl__track">
+    <div class="hl__stick">
+      <header class="hl__intro wrap">
+        <p class="eyebrow"><i>Acara</i><span>Event highlights</span></p>
+        <h2 class="h2">Every semester,<br>something to <em>show up for.</em></h2>
+      </header>
+      <div class="hl__stage">
+        <canvas class="hl__canvas" aria-hidden="true"></canvas>
+        <ol class="hl__items" id="hl-items"></ol>
       </div>
-      <div class="chips" id="ev-chips" role="group" aria-label="Filter events by year" data-reveal></div>
+      <ol class="hl__rail wrap" id="hl-rail" aria-label="Jump to a highlight"></ol>
+      <p class="hl__hint mono" aria-hidden="true">Scroll <svg><use href="#i-chev"/></svg></p>
+      <a class="hl__skip mono" href="#archive">Skip to the archive <svg aria-hidden="true"><use href="#i-down"/></svg></a>
     </div>
-    <ol class="ev__list" id="ev-list"></ol>
-    <p class="ev__foot mono" id="ev-foot"></p>
   </div>
-  <div class="ev__preview" id="ev-preview" aria-hidden="true"><img alt=""></div>
+</section>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee__row">
+    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
+    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
+  </div>
+</div>
+
+<!-- Archive: every event on one sideways strip, newest first. The year buttons jump along it -->
+<section class="band band--mori ar" id="archive">
+  <div class="wrap">
+    <div class="ar__head">
+      <div>
+        <p class="eyebrow" data-reveal><i>Arsip</i><span>The archive</span></p>
+        <h2 class="h2" data-reveal>Pick a year,<br><em>any year.</em></h2>
+      </div>
+      <div class="ar__nav" data-reveal>
+        <button class="ar__arrow ar__arrow--prev" type="button" id="ar-prev" aria-label="Scroll the archive back"><svg aria-hidden="true"><use href="#i-down"/></svg></button>
+        <button class="ar__arrow ar__arrow--next" type="button" id="ar-next" aria-label="Scroll the archive forward"><svg aria-hidden="true"><use href="#i-down"/></svg></button>
+      </div>
+    </div>
+    <div class="years" id="ar-years" role="group" aria-label="Jump to a year" data-reveal></div>
+  </div>
+  <ol class="ar__strip" id="ar-strip"></ol>
+  <div class="wrap">
+    <div class="ar__bar" aria-hidden="true"><i id="ar-bar"></i></div>
+    <div class="ar__foot mono"><p id="ar-foot"></p><p aria-hidden="true">Drag, swipe or use the arrows</p></div>
+  </div>
 </section>
 
 <dialog class="lb" id="lb" aria-label="Event photo">
@@ -42,13 +75,6 @@
   <button class="lb__btn lb__next" type="button" id="lb-next" aria-label="Next event"><svg aria-hidden="true"><use href="#i-down"/></svg></button>
   <button class="lb__btn lb__close" type="button" id="lb-close" aria-label="Close"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
 </dialog>
-
-<div class="marquee" aria-hidden="true">
-  <div class="marquee__row">
-    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
-    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
-  </div>
-</div>
 
 </main>
 

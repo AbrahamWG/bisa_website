@@ -33,77 +33,297 @@
     $$('[data-link]').forEach(a => { const u = L[a.dataset.link]; if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener'; } });
   }
 
-  /* ---------------------------------------------------------------- render content */
-  function renderEvents() {
-    const list = $('#ev-list'), chips = $('#ev-chips'), foot = $('#ev-foot');
-    const E = C.events || [];
-    if (!list || !E.length) return;
-    list.innerHTML = E.map((e, i) => `
-      <li data-year="${e.year}">
-        <button class="ev__row" type="button" data-i="${i}" aria-label="${esc(e.name)}, ${e.year}. Open photo">
-          <span class="ev__year">${e.year}</span>
-          <span class="ev__name">${esc(e.name)}</span>
-          <img class="ev__thumb" src="${img(e.img)}" width="${e.w}" height="${e.h}" loading="lazy" alt="">
-          <span class="ev__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
-        </button>
-      </li>`).join('');
-
-    const years = [...new Set(E.map(e => e.year))].sort((a, b) => b - a);
-    chips.innerHTML = ['All', ...years].map((y, i) => `<button class="chip" type="button" data-y="${y}" aria-pressed="${i === 0}">${y}</button>`).join('');
-    const rows = $$('li', list);
-    const say = y => { const n = rows.filter(r => !r.hidden).length; foot.textContent = `${n} ${n === 1 ? 'event' : 'events'} on record${y === 'All' ? `, ${years[years.length - 1]} to ${years[0]}` : ` in ${y}`}`; };
-    say('All');
-    chips.addEventListener('click', ev => {
-      const b = ev.target.closest('.chip'); if (!b) return;
-      $$('.chip', chips).forEach(c => c.setAttribute('aria-pressed', c === b));
-      rows.forEach(r => { r.hidden = b.dataset.y !== 'All' && r.dataset.year !== b.dataset.y; });
-      say(b.dataset.y);
-    });
-
-    /* lightbox */
-    const lb = $('#lb'), lbImg = $('#lb-img'), lbCap = $('#lb-cap'), lbPos = $('#lb-pos');
-    let cur = 0;
-    const visible = () => rows.filter(r => !r.hidden).map(r => +$('.ev__row', r).dataset.i);
-    const show = i => {
-      cur = i; const e = E[i], v = visible();
-      lbImg.src = img(e.img); lbImg.width = e.w; lbImg.height = e.h; lbImg.alt = `${e.name}, ${e.year}`;
-      lbCap.textContent = `${e.name}, ${e.year}`;
-      lbPos.textContent = `${v.indexOf(i) + 1} / ${v.length}`;
+  /* ---------------------------------------------------------------- events: highlights */
+  /* A pinned stage at the top of the Events page. Scrolling grows the first photo out of its frame, then each
+     next photo breaks through as a field of dots. Without WebGL the photos cross-fade instead. With reduced
+     motion, or on very short screens, the highlights are a plain list. Content: "highlights" in content.js. */
+  function highlights() {
+    const sec = $('.hl'), list = $('#hl-items'), rail = $('#hl-rail'), E = C.events || [];
+    if (!sec || !list || !rail) return;
+    const data = (C.highlights || []).map(h => { const i = E.findIndex(e => e.img === h.event); return i < 0 ? null : { ...h, i, e: E[i] }; }).filter(Boolean);
+    if (!data.length) { sec.remove(); return; }
+    const n2 = n => String(n).padStart(2, '0');
+    // Each word rises on its own. The last word of a longer title is set in the italic serif
+    const title = s => {
+      const w = s.split(/\s+/).filter(Boolean), sp = (x, j) => `<span class="hl__w" style="--i:${j}"><span>${esc(x)}</span></span>`;
+      return w.map((x, j) => w.length > 1 && j === w.length - 1 ? `<em>${sp(x, j)}</em>` : sp(x, j)).join(' ');
     };
-    const step = d => { const v = visible(); show(v[(v.indexOf(cur) + d + v.length) % v.length]); };
-    list.addEventListener('click', ev => {
-      const b = ev.target.closest('.ev__row'); if (!b) return;
-      show(+b.dataset.i);
-      if (lb.showModal) lb.showModal(); else lb.setAttribute('open', '');
-    });
-    $('#lb-prev').addEventListener('click', () => step(-1));
-    $('#lb-next').addEventListener('click', () => step(1));
-    $('#lb-close').addEventListener('click', () => lb.close());
-    lb.addEventListener('click', ev => { if (ev.target === lb) lb.close(); });
-    lb.addEventListener('keydown', ev => { if (ev.key === 'ArrowLeft') step(-1); if (ev.key === 'ArrowRight') step(1); });
+    list.innerHTML = data.map((d, n) => `
+      <li class="hl__item">
+        <div class="hl__ph"><img src="${img(d.photo || d.e.img)}"${n ? ' loading="lazy"' : ''} alt="${esc(d.e.name)}, ${d.e.year}"></div>
+        <p class="hl__year" aria-hidden="true">${d.e.year}</p>
+        <div class="hl__copy">
+          <p class="eyebrow hl__fade"><i>${esc(d.pillar || 'Acara')}</i><span>${d.pillarEn ? esc(d.pillarEn) + ' · ' : ''}${d.e.year}</span></p>
+          <h3 class="hl__title">${title(d.title || d.e.name)}</h3>
+          ${d.text ? `<p class="hl__text hl__fade">${esc(d.text)}</p>` : ''}
+          <p class="hl__open hl__fade"><button class="btn btn--line btn--sm" type="button" data-open="${d.i}">See the photo <svg aria-hidden="true"><use href="#i-arrow"/></svg></button></p>
+        </div>
+      </li>`).join('');
+    rail.innerHTML = data.map((d, n) => `<li><button type="button" data-n="${n}" aria-label="Highlight ${n + 1} of ${data.length}: ${esc(d.e.name)}, ${d.e.year}"><i><b></b></i><span class="mono"><b>${n2(n + 1)}</b><span>${esc(d.title || d.e.name)}</span></span></button></li>`).join('');
 
-    /* cursor-following preview */
-    const pv = $('#ev-preview'), pvImg = $('img', pv);
-    if (FINE && !RM) {
-      let tx = 0, ty = 0, x = 0, y = 0, on = false, warmed = false;
-      list.addEventListener('pointerover', ev => {
-        const b = ev.target.closest('.ev__row'); if (!b) return;
-        if (!warmed) { warmed = true; E.forEach(e => { new Image().src = img(e.img); }); }
-        pvImg.src = img(E[+b.dataset.i].img);
-        if (!on) { x = ev.clientX; y = ev.clientY; }
-        on = true; pv.classList.add('is-on');
-      });
-      list.addEventListener('pointermove', ev => { tx = ev.clientX; ty = ev.clientY; });
-      list.addEventListener('pointerleave', () => { on = false; pv.classList.remove('is-on'); });
-      tasks.push(() => {
-        if (!on && Math.abs(tx - x) < .5) return;
-        const px = x; x = lerp(x, tx, .14); y = lerp(y, ty, .14);
-        const off = innerWidth * .16;
-        pv.style.transform = `translate3d(${x + off}px,${y}px,0) rotate(${clamp((x - px) * .35, -9, 9)}deg)`;
-      });
-    }
+    const track = $('.hl__track', sec), stick = $('.hl__stick', sec), stage = $('.hl__stage', sec), intro = $('.hl__intro', sec), hint = $('.hl__hint', sec);
+    const items = $$('.hl__item', list), phs = items.map(it => $('.hl__ph', it)), tabs = $$('li', rail), N = items.length;
+    const glx = RM ? null : dots($('.hl__canvas', sec), phs.map(p => $('img', p)));
+    const mq = matchMedia('(min-height: 480px)');
+    const io = t => t * t * (3 - 2 * t);
+    /* a: scroll spent growing the first photo. b: scroll per photo. tail: rest on the last photo before the page moves on. */
+    let pin = false, a = 1, b = 1, tail = 1, span = 1, cardTop = 0, gut = 16, y = -1, cur = -2;
+    const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+
+    const setup = () => {
+      pin = !RM && mq.matches;
+      sec.classList.toggle('hl--pin', pin); sec.classList.toggle('hl--gl', pin && !!glx);
+      cur = -2;
+      if (!pin) {
+        track.style.removeProperty('--h'); stage.style.clipPath = '';
+        [intro, hint, rail].forEach(el => el.removeAttribute('style'));
+        phs.forEach(p => { p.style.opacity = ''; p._o = -1; });
+        return;
+      }
+      const W = stick.clientWidth, H = stick.clientHeight;
+      a = H * .7; b = H * .95; tail = H * .4; span = a + (N - 1) * b + tail;
+      track.style.setProperty('--h', Math.round(span + H) + 'px');
+      cardTop = intro.offsetHeight + 20; gut = parseFloat(getComputedStyle(intro).paddingLeft) || 16;
+      if (glx) glx.size(W, H);
+    };
+    setup(); addEventListener('resize', setup); mq.addEventListener('change', setup);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(setup);
+
+    // The numbered bar across the top jumps to a highlight
+    rail.addEventListener('click', ev => {
+      const bt = ev.target.closest('button'); if (!bt || !pin) return;
+      const n = +bt.dataset.n;
+      scrollTo({ top: scrollY + track.getBoundingClientRect().top + (n ? a + (n - .1) * b : a), behavior: 'smooth' });
+    });
+    if (FINE) stick.addEventListener('pointermove', e => { mouse.tx = e.clientX / innerWidth * 2 - 1; mouse.ty = e.clientY / innerHeight * 2 - 1; });
+
+    tasks.push(() => {
+      if (!pin) return;
+      const r = track.getBoundingClientRect();
+      if (r.bottom < -100 || r.top > innerHeight + 100) return;
+      const target = clamp(-r.top, 0, span);
+      y = y < 0 ? target : lerp(y, target, .12); if (Math.abs(y - target) < .4) y = target;
+
+      // Opening move: the framed photo under the headline grows to fill the screen
+      const e0 = ss(0, a, y), k0 = 1 - e0;
+      stage.style.clipPath = k0 < .001 ? 'none' : `inset(${(cardTop * k0).toFixed(1)}px ${(gut * k0).toFixed(1)}px ${(56 * k0).toFixed(1)}px round ${(10 * k0).toFixed(1)}px)`;
+      intro.style.opacity = clamp(1 - e0 * 1.25).toFixed(3);
+      intro.style.transform = `translate3d(0,${(-cardTop * e0).toFixed(1)}px,0)`;   // the growing photo pushes the headline off the top
+      intro.style.visibility = e0 > .8 ? 'hidden' : 'visible';
+      hint.style.opacity = clamp(1 - e0 * 3).toFixed(3);
+      rail.style.opacity = ss(.55, 1, e0).toFixed(3); rail.style.visibility = e0 < .55 ? 'hidden' : 'visible';
+
+      // f counts photos scrolled past. k is the photo underneath, tr is how far the next one has broken through
+      const f = y <= a ? 0 : (y - a) / b, k = Math.min(N - 1, Math.floor(f));
+      const tr = k >= N - 1 ? 0 : io(clamp((f - k - .22) / .62));
+      const on = e0 < .82 ? -1 : tr > .5 ? k + 1 : k;
+      if (on !== cur) {
+        cur = on;
+        items.forEach((it, n) => it.classList.toggle('is-on', n === on));
+        tabs.forEach((li, n) => { li.classList.toggle('is-on', n === on); $('button', li).setAttribute('aria-current', n === on ? 'true' : 'false'); });
+      }
+      tabs.forEach((li, n) => { const s = n ? n - .47 : 0, e = n < N - 1 ? n + .53 : N - 1 + tail / b; li.style.setProperty('--p', clamp((f - s) / (e - s)).toFixed(3)); });
+
+      // Each photo drifts and settles a little for as long as it is on screen
+      mouse.x = lerp(mouse.x, mouse.tx, .06); mouse.y = lerp(mouse.y, mouse.ty, .06);
+      const view = n => { const life = n ? clamp((f - n + .78) / 1.8) : clamp(y / (a + b)); return [1.22 - .16 * life, mouse.x * .006, (.5 - life) * .03 + mouse.y * .006]; };
+      const nx = Math.min(k + 1, N - 1);
+      if (glx) glx.draw(k, nx, tr, view(k), view(nx), .3 + .7 * e0);
+      else phs.forEach((p, n) => { const o = n <= k ? 1 : n === k + 1 ? tr : 0; if (p._o !== o) { p._o = o; p.style.opacity = o.toFixed(3); } });
+    });
   }
 
+  /* WebGL for the highlights stage. Draws photo A and lets photo B through a grid of dots that grow from the
+     bottom edge upward until they merge, a nod to the dots on the home page. Returns null if WebGL is missing. */
+  function dots(cv, imgs) {
+    const gl = cv && cv.getContext('webgl', { alpha: false, antialias: false, powerPreference: 'high-performance' });
+    if (!gl) return null;
+    const VS = `attribute vec2 p; varying vec2 v; void main(){ v = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
+    const FS = `
+      precision mediump float;
+      varying vec2 v;
+      uniform sampler2D uA, uB;
+      uniform vec2 uRes, uRA, uRB;   // canvas size and the two photo sizes, in pixels
+      uniform vec3 uVA, uVB;         // per photo: zoom, pan x, pan y
+      uniform float uT, uCell, uS;   // transition 0..1, dot spacing in pixels, strength of the dark gradient
+      vec3 photo(sampler2D s, vec2 r, vec3 view, vec2 uv){
+        float ca = uRes.x / uRes.y, ia = r.x / r.y;
+        vec2 sc = ca > ia ? vec2(1., ia / ca) : vec2(ca / ia, 1.);   // cover the canvas, like object-fit
+        return texture2D(s, (uv - .5) * sc / view.x + .5 + view.yz).rgb;
+      }
+      void main(){
+        vec2 uv = vec2(v.x, 1. - v.y);
+        vec3 col = photo(uA, uRA, uVA, uv);
+        if (uT > 0.) {
+          vec2 px = uv * uRes, cell = floor(px / uCell), c = (cell + .5) * uCell;
+          float d = length(px - c) / uCell;
+          float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+          float t = clamp(uT * 2. - (1. - c.y / uRes.y) * .82 - h * .18, 0., 1.);
+          float r = t * .8;
+          float m = (1. - smoothstep(r - .04, r + .04, d)) * step(.002, t);
+          float rim = smoothstep(r - .16, r, d) * m * (1. - t);
+          col = mix(col, photo(uB, uRB, uVB, uv), m);
+          col = mix(col, vec3(.992, .718, .098), rim * .6);          // gold edge on the growing dots
+        }
+        // darken the bottom for the text and the top for the numbered bar
+        float s = smoothstep(.3, 1., uv.y) * .8 + (1. - smoothstep(0., .28, uv.y)) * .32;
+        gl_FragColor = vec4(mix(col, vec3(.027, .043, .141), clamp(s, 0., .88) * uS), 1.);
+      }`;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = {}; ['uA', 'uB', 'uRes', 'uRA', 'uRB', 'uVA', 'uVB', 'uT', 'uCell', 'uS'].forEach(n => { U[n] = gl.getUniformLocation(pr, n); });
+    const mk = () => {
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, val]) => gl.texParameteri(gl.TEXTURE_2D, k, val));
+      return t;
+    };
+    // Photos show as flat indigo until they have loaded
+    const blank = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([12, 18, 54, 255]));
+    const tex = imgs.map(() => blank), dim = imgs.map(() => [3, 2]);
+    imgs.forEach((im, n) => {
+      const up = () => {
+        if (!im.naturalWidth) return;
+        try { const t = mk(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); tex[n] = t; dim[n] = [im.naturalWidth, im.naturalHeight]; } catch (e) { /* keep the flat colour */ }
+      };
+      im.loading = 'eager';
+      if (im.complete) up(); else im.addEventListener('load', up, { once: true });
+    });
+    return {
+      size(w, h) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        gl.viewport(0, 0, cv.width, cv.height); gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform1f(U.uCell, clamp(w / 84, 9, 18) * dpr);
+      },
+      draw(ia, ib, t, va, vb, scrim) {
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[ia]); gl.uniform1i(U.uA, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[ib]); gl.uniform1i(U.uB, 1);
+        gl.uniform2f(U.uRA, dim[ia][0], dim[ia][1]); gl.uniform2f(U.uRB, dim[ib][0], dim[ib][1]);
+        gl.uniform3f(U.uVA, va[0], va[1], va[2]); gl.uniform3f(U.uVB, vb[0], vb[1], vb[2]);
+        gl.uniform1f(U.uT, t); gl.uniform1f(U.uS, scrim);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------------- events: archive */
+  /* Every event on one sideways strip, newest first, with a tall year marker in front of each year.
+     The year buttons glide the strip to that year, and the strip marks the year you have scrolled to. */
+  function archive() {
+    const strip = $('#ar-strip'), yrs = $('#ar-years'), E = C.events || [];
+    if (!strip || !yrs || !E.length) return;
+    const years = [...new Set(E.map(e => e.year))];
+    const of = y => E.map((e, i) => ({ e, i })).filter(o => o.e.year === y);
+    const n2 = n => String(n).padStart(2, '0'), evs = n => `${n} ${n === 1 ? 'event' : 'events'}`;
+    strip.innerHTML = years.map(y => {
+      const g = of(y);
+      return `
+      <li class="ar__mark" data-y="${y}" aria-hidden="true"><span class="mono">${evs(g.length)}</span><b>${y}</b></li>` + g.map((o, j) => `
+      <li class="ar__card" data-reveal style="--i:${j % 4}">
+        <button class="ar__btn" type="button" data-open="${o.i}" aria-label="${esc(o.e.name)}, ${y}. Open photo">
+          <span class="ar__ph"><img src="${img(o.e.img)}" width="${o.e.w}" height="${o.e.h}" loading="lazy" alt="" draggable="false"></span>
+          <span class="ar__meta"><span class="mono">${y} · ${n2(j + 1)} / ${n2(g.length)}</span><span class="ar__name">${esc(o.e.name)}</span><span class="ar__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span></span>
+        </button>
+      </li>`).join('');
+    }).join('');
+    yrs.innerHTML = years.map((y, i) => `<button class="yr" type="button" data-y="${y}" aria-pressed="${i === 0}" aria-label="${y}, ${evs(of(y).length)}"><b>${y}</b><sup class="mono" aria-hidden="true">${of(y).length}</sup></button>`).join('');
+    const foot = $('#ar-foot');
+    if (foot) foot.textContent = `${evs(E.length)} on record, ${Math.min(...years)} to ${Math.max(...years)}`;
+
+    const marks = $$('.ar__mark', strip), btns = $$('.yr', yrs), cards = $$('.ar__card', strip), pics = cards.map(c => $('img', c));
+    const bar = $('#ar-bar'), prev = $('#ar-prev'), next = $('#ar-next');
+    const how = RM ? 'auto' : 'smooth';
+    const pad = () => parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+    let active = years[0], lock = 0, last = -1, glide = 0;
+
+    const setYear = y => {
+      if (y === active) return; active = y;
+      btns.forEach(b => {
+        const hit = +b.dataset.y === y; b.setAttribute('aria-pressed', hit);
+        if (hit) yrs.scrollTo({ left: b.offsetLeft - (yrs.clientWidth - b.offsetWidth) / 2, behavior: how });   // keep the picked year in view on phones
+      });
+    };
+    yrs.addEventListener('click', ev => {
+      const b = ev.target.closest('.yr'); if (!b) return;
+      const m = marks.find(el => el.dataset.y === b.dataset.y); if (!m) return;
+      glide = 0; lock = performance.now() + 1000;   // hold the picked year while the strip travels there
+      setYear(+b.dataset.y);
+      strip.scrollTo({ left: m.offsetLeft - pad(), behavior: how });
+    });
+    const page = d => { glide = 0; strip.scrollBy({ left: d * strip.clientWidth * .8, behavior: how }); };
+    if (prev) prev.addEventListener('click', () => page(-1));
+    if (next) next.addEventListener('click', () => page(1));
+    // Left and right arrow keys walk through the cards
+    strip.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const bs = $$('.ar__btn', strip), i = bs.indexOf(document.activeElement); if (i < 0) return;
+      e.preventDefault(); bs[clamp(i + (e.key === 'ArrowRight' ? 1 : -1), 0, bs.length - 1)].focus();
+    });
+
+    const sync = () => {
+      const x = strip.scrollLeft, w = strip.clientWidth, max = strip.scrollWidth - w;
+      if (bar) bar.style.transform = `scaleX(${(max > 0 ? clamp(x / max) : 1).toFixed(4)})`;
+      if (prev) prev.disabled = x < 2;
+      if (next) next.disabled = x > max - 2;
+      if (performance.now() > lock) {
+        let yv = +marks[0].dataset.y; const edge = pad() + w * .35;
+        for (const m of marks) if (m.offsetLeft - x <= edge) yv = +m.dataset.y;
+        if (max > 0 && x >= max - 2) yv = +marks[marks.length - 1].dataset.y;
+        setYear(yv);
+      }
+      // Photos slide a little inside their frames as the strip moves
+      if (!RM) cards.forEach((c, i) => { const cx = (c.offsetLeft + c.offsetWidth / 2 - x) / w; if (cx > -.4 && cx < 1.4) pics[i].style.transform = `translate3d(${((.5 - cx) * 6).toFixed(2)}%,0,0)`; });
+    };
+    addEventListener('resize', () => { last = -1; });
+
+    // Mouse: drag the strip, and let it coast after letting go
+    if (FINE) {
+      let down = false, moved = false, sx = 0, sl = 0, px = 0, v = 0;
+      strip.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button) return; down = true; moved = false; glide = 0; sx = px = e.clientX; sl = strip.scrollLeft; v = 0; });
+      addEventListener('pointermove', e => {
+        if (!down) return;
+        const dx = e.clientX - sx; if (!moved && Math.abs(dx) < 6) return;
+        moved = true; strip.classList.add('is-drag');
+        strip.scrollLeft = sl - dx; v = e.clientX - px; px = e.clientX;
+      });
+      const end = () => { if (!down) return; down = false; strip.classList.remove('is-drag'); if (moved) glide = RM ? 0 : v; };
+      addEventListener('pointerup', end); addEventListener('pointercancel', end);
+      strip.addEventListener('click', e => { if (moved) { moved = false; e.preventDefault(); e.stopPropagation(); } }, true);   // a drag is not a click
+      tasks.push(() => { if (down || !glide) return; strip.scrollLeft -= glide; glide *= .93; if (Math.abs(glide) < .4) glide = 0; });
+    }
+    tasks.push(() => { const x = strip.scrollLeft; if (x === last) return; last = x; sync(); });
+  }
+
+  /* ---------------------------------------------------------------- events: photo viewer */
+  /* Any element with data-open="<index into events>" opens that event's photo. Arrows step through every event. */
+  function lightbox() {
+    const lb = $('#lb'), E = C.events || [];
+    if (!lb || !E.length) return;
+    const lbImg = $('#lb-img'), lbCap = $('#lb-cap'), lbPos = $('#lb-pos');
+    let cur = 0;
+    const show = i => {
+      cur = (i + E.length) % E.length; const e = E[cur];
+      lbImg.src = img(e.img); lbImg.width = e.w; lbImg.height = e.h; lbImg.alt = `${e.name}, ${e.year}`;
+      lbCap.textContent = `${e.name}, ${e.year}`;
+      lbPos.textContent = `${cur + 1} / ${E.length}`;
+    };
+    document.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-open]'); if (!b || !E[+b.dataset.open]) return;
+      show(+b.dataset.open);
+      if (lb.showModal) lb.showModal(); else lb.setAttribute('open', '');
+    });
+    $('#lb-prev').addEventListener('click', () => show(cur - 1));
+    $('#lb-next').addEventListener('click', () => show(cur + 1));
+    $('#lb-close').addEventListener('click', () => lb.close());
+    lb.addEventListener('click', ev => { if (ev.target === lb) lb.close(); });
+    lb.addEventListener('keydown', ev => { if (ev.key === 'ArrowLeft') show(cur - 1); if (ev.key === 'ArrowRight') show(cur + 1); });
+  }
+
+  /* ---------------------------------------------------------------- render content */
   function renderTeam() {
     const ul = $('#people'), T = C.team || [];
     if (!ul) return;
@@ -459,6 +679,6 @@
 
   /* ---------------------------------------------------------------- go */
   const safe = fn => { try { fn(); } catch (e) { console.error(e); } };
-  [renderEvents, renderTeam, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
+  [highlights, archive, lightbox, renderTeam, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
   requestAnimationFrame(frame);
 })();
