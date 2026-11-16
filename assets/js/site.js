@@ -16,6 +16,7 @@
   const img = n => `assets/img/${n}.webp`;
   const fmt = n => Math.round(n).toLocaleString('en-US');
   if (RM) root.classList.add('rm');
+  if (window.BISA_FOOTER) window.BISA_FOOTER(); // shared footer from layout.js
 
   /* one shared frame loop */
   const tasks = [];
@@ -117,7 +118,7 @@
       </li>`).join('') + `
       <li class="person person--you" data-reveal style="--i:3">
         <div class="person__ph"><svg aria-hidden="true"><use href="#i-plus"/></svg></div>
-        <div class="person__meta"><b><a href="${esc((C.links || {}).apply || '#join')}" target="_blank" rel="noopener">You, next year?</a></b><span>Elections happen every spring</span></div>
+        <div class="person__meta"><b><a href="${esc((C.links || {}).apply || 'join.html')}" target="_blank" rel="noopener">You, next year?</a></b><span>Elections happen every spring</span></div>
       </li>`;
     const d = $('#depts');
     if (d) d.innerHTML = (C.departments || []).map(n => `<span>${esc(n)}</span>`).join('<i>/</i> ');
@@ -131,24 +132,6 @@
       });
       el.addEventListener('pointerleave', () => { ph.style.setProperty('--ry', '0deg'); ph.style.setProperty('--rx', '0deg'); });
     });
-  }
-
-  function renderMerch() {
-    const ul = $('#merch-grid');
-    if (!ul) return;
-    ul.innerHTML = (C.merch || []).map((m, i) => `
-      <li class="item" data-reveal style="--i:${i}">
-        <div class="item__ph">
-          ${m.img ? `<img src="${img(m.img)}" width="1080" height="1080" loading="lazy" alt="${esc(m.name)}">` : `<div class="item__words" aria-hidden="true">${(m.words || []).map(w => `<span>${esc(w)}</span>`).join('')}</div>`}
-          <span class="item__price">${esc(m.price)}</span>
-        </div>
-        <div class="item__body">
-          <h3>${esc(m.name)}</h3>
-          <p>${esc(m.text)}</p>
-          <p class="mono">${esc(m.note || '')}</p>
-          ${m.href ? `<a class="btn btn--sm btn--solid" href="${esc(m.href)}" target="_blank" rel="noopener">Get one now <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>` : ''}
-        </div>
-      </li>`).join('');
   }
 
   function renderFaq() {
@@ -167,6 +150,7 @@
     const track = $('.hero__track'), stick = $('.hero__stick'), cv = $('.hero__canvas');
     if (!track || !cv || !SH) return;
     const panels = [1, 2, 3].map(i => $('.hero__panel--' + i));
+    const titleEl = $('.hero__title');
     const labelBox = $('.hero__labels'), labels = $$('.hero__label'), kmEl = $('[data-km]');
     const N = SH.n;
     const dec = b => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Uint16Array(u.buffer); };
@@ -228,9 +212,10 @@
           gl_Position = vec4(c.x, -c.y, 0., 1.);
           gl_PointSize = (mix(1.25 + aS.w * 1.9, 1.5 + aS.w * 1.5, e) + arc * 1.6 * aS.z) * uDpr;
 
-          vec3 mori = vec3(.96, .94, .89), emas = vec3(.992, .718, .098), merah = vec3(1., .33, .30), nila = vec3(.62, .68, 1.);
+          // Islands use two colors only: white and gold
+          vec3 mori = vec3(.96, .94, .89), emas = vec3(.992, .718, .098);
           vec3 ca = mori;
-          if (aS.y > .9) ca = emas; else if (aS.y > .84) ca = merah; else if (aS.y < .22) ca = nila;
+          if (aS.y > .78) ca = emas;
           vec3 cb = mix(emas, vec3(1., .9, .6), aS.w * aS.w * .55);
           vCol = mix(ca, cb, smoothstep(.15, .9, e));
           float tw = .62 + .38 * sin(uT * 1.6 + aS.w * 60.);
@@ -262,7 +247,10 @@
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       const m = W < 760;
       const mw = m ? W * 1.34 : Math.min(W * .88, H * 1.62, 1600);
-      TA = [W * .5, m ? H * .27 : H * .385, mw];
+      // Phones: sit the islands between the navbar and the title, closer to the title
+      let ay = H * .385;
+      if (m) { const top = 76, bot = titleEl ? titleEl.offsetTop : H * .55, mh = mw / SH.islands.aspect; ay = Math.max(top + 14 + mh / 2, Math.min(top + (bot - top) * .6, bot - 22 - mh / 2)); }
+      TA = [W * .5, ay, mw];
       TB = [m ? W * .5 : W * .73, m ? H * .29 : H * .53, m ? H * .36 : Math.min(H * .68, W * .62)];
       const [x0, , x1, y1] = SH.islands.bbox, y0 = SH.islands.bbox[1];
       labels.forEach(l => {
@@ -277,6 +265,7 @@
     }
     layout();
     addEventListener('resize', layout);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
 
     const mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999, s: 0, ts: 0 };
     stick.addEventListener('pointermove', e => { const r = stick.getBoundingClientRect(); mouse.tx = e.clientX - r.left; mouse.ty = e.clientY - r.top; mouse.ts = e.pointerType === 'touch' ? 0 : 1; if (mouse.s < .02) { mouse.x = mouse.tx; mouse.y = mouse.ty; } });
@@ -318,7 +307,7 @@
   function nav() {
     const bar = $('#nav'), menu = $('#menu'), tog = $('#menu-toggle');
     let open = false;
-    const set = v => { open = v; menu.hidden = !v; tog.setAttribute('aria-expanded', v); $('span', tog).textContent = v ? 'Close' : 'Menu'; document.body.style.overflow = v ? 'hidden' : ''; };
+    const set = v => { open = v; menu.hidden = !v; tog.setAttribute('aria-expanded', v); tog.setAttribute('aria-label', v ? 'Close menu' : 'Open menu'); document.body.style.overflow = v ? 'hidden' : ''; };
     tog.addEventListener('click', () => set(!open));
     menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
     addEventListener('keydown', e => { if (e.key === 'Escape' && open) set(false); });
@@ -330,12 +319,6 @@
       acc = Math.sign(vy) === Math.sign(acc) ? acc + vy : vy;
       if (acc > 60) bar.classList.add('is-hidden'); else if (acc < -30) bar.classList.remove('is-hidden');
     });
-
-    const map = new Map($$('.nav__links a').map(a => [a.getAttribute('href').slice(1), a]));
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(es => es.forEach(e => { const a = map.get(e.target.id); if (a) { if (e.isIntersecting) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); } }), { rootMargin: '-45% 0px -50% 0px' });
-      map.forEach((a, id) => { const s = document.getElementById(id); if (s) io.observe(s); });
-    }
   }
 
   /* ---------------------------------------------------------------- scroll-lit statement */
@@ -476,6 +459,6 @@
 
   /* ---------------------------------------------------------------- go */
   const safe = fn => { try { fn(); } catch (e) { console.error(e); } };
-  [renderEvents, renderTeam, renderMerch, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
+  [renderEvents, renderTeam, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
   requestAnimationFrame(frame);
 })();
