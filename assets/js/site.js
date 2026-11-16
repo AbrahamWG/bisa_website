@@ -167,6 +167,7 @@
     const track = $('.hero__track'), stick = $('.hero__stick'), cv = $('.hero__canvas');
     if (!track || !cv || !SH) return;
     const panels = [1, 2, 3].map(i => $('.hero__panel--' + i));
+    const titleEl = $('.hero__title');
     const labelBox = $('.hero__labels'), labels = $$('.hero__label'), kmEl = $('[data-km]');
     const N = SH.n;
     const dec = b => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Uint16Array(u.buffer); };
@@ -263,7 +264,10 @@
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       const m = W < 760;
       const mw = m ? W * 1.34 : Math.min(W * .88, H * 1.62, 1600);
-      TA = [W * .5, m ? H * .27 : H * .385, mw];
+      // Phones: sit the islands between the navbar and the title, closer to the title
+      let ay = H * .385;
+      if (m) { const top = 76, bot = titleEl ? titleEl.offsetTop : H * .55, mh = mw / SH.islands.aspect; ay = Math.max(top + 14 + mh / 2, Math.min(top + (bot - top) * .6, bot - 22 - mh / 2)); }
+      TA = [W * .5, ay, mw];
       TB = [m ? W * .5 : W * .73, m ? H * .29 : H * .53, m ? H * .36 : Math.min(H * .68, W * .62)];
       const [x0, , x1, y1] = SH.islands.bbox, y0 = SH.islands.bbox[1];
       labels.forEach(l => {
@@ -278,6 +282,7 @@
     }
     layout();
     addEventListener('resize', layout);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
 
     const mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999, s: 0, ts: 0 };
     stick.addEventListener('pointermove', e => { const r = stick.getBoundingClientRect(); mouse.tx = e.clientX - r.left; mouse.ty = e.clientY - r.top; mouse.ts = e.pointerType === 'touch' ? 0 : 1; if (mouse.s < .02) { mouse.x = mouse.tx; mouse.y = mouse.ty; } });
