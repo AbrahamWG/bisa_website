@@ -228,9 +228,10 @@
           gl_Position = vec4(c.x, -c.y, 0., 1.);
           gl_PointSize = (mix(1.25 + aS.w * 1.9, 1.5 + aS.w * 1.5, e) + arc * 1.6 * aS.z) * uDpr;
 
-          vec3 mori = vec3(.96, .94, .89), emas = vec3(.992, .718, .098), merah = vec3(1., .33, .30), nila = vec3(.62, .68, 1.);
+          // Islands use two colors only: white and gold
+          vec3 mori = vec3(.96, .94, .89), emas = vec3(.992, .718, .098);
           vec3 ca = mori;
-          if (aS.y > .9) ca = emas; else if (aS.y > .84) ca = merah; else if (aS.y < .22) ca = nila;
+          if (aS.y > .78) ca = emas;
           vec3 cb = mix(emas, vec3(1., .9, .6), aS.w * aS.w * .55);
           vCol = mix(ca, cb, smoothstep(.15, .9, e));
           float tw = .62 + .38 * sin(uT * 1.6 + aS.w * 60.);
