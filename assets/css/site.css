@@ -134,7 +134,7 @@ figcaption.mono{margin-top:.7rem;opacity:.75}
 .hero__top{display:flex;justify-content:space-between;gap:1rem;color:var(--nila-300)}
 .hero__count{text-align:right}
 .hero__count b{color:var(--emas);font-weight:500}
-.hero__foot{align-self:end;display:grid;grid-template-columns:minmax(0,1fr) minmax(15rem,25rem);gap:clamp(1.5rem,4vw,4rem);align-items:end}
+.hero__foot{grid-row:2;align-self:end;display:grid;grid-template-columns:minmax(0,1fr) minmax(15rem,25rem);gap:clamp(1.5rem,4vw,4rem);align-items:end}
 .hero__title{font-weight:800;font-stretch:75%;font-size:clamp(4.5rem,min(14.5vw,31vh),18rem);line-height:.8;letter-spacing:-.03em;white-space:nowrap;margin-left:-.04em;padding-bottom:.06em}
 .hero__title em{color:var(--emas);font-weight:300;letter-spacing:-.04em;padding-right:.08em}
 .rise{display:inline-block;overflow:hidden;vertical-align:bottom;padding:.12em .06em .14em 0;margin:-.12em -.06em -.14em 0}
@@ -171,7 +171,8 @@ figcaption.mono{margin-top:.7rem;opacity:.75}
 @media (max-width:760px){
   .hero__foot{grid-template-columns:minmax(0,1fr);gap:1rem}
   .hero__title{font-size:clamp(3.5rem,min(22vw,17vh),9rem)}
-  .hero__top{font-size:.625rem}
+  /* Phones: no small text between the navbar and the islands */
+  .hero__top{display:none}
   .hero__def{font-size:1.0625rem;padding-bottom:.75rem}
   .hero__lede{gap:.75rem}
   .hero__label{font-size:.5rem}
