@@ -72,19 +72,6 @@ window.BISA_CONTENT = {
     "Professional Development", "Cultural Affairs", "Media and Documentation"
   ],
 
-  merch: [
-    { name: "BISA Hoodies", price: "$30", img: "merch-hoodie",
-      text: "A minimal design of UC Berkeley’s Sather Tower with an Indonesian batik pattern backdrop, so you can rep your school pride and your Indo pride at the same time.",
-      note: "Pickups on campus or in Downtown Berkeley." },
-    { name: "“Beary Hot” T-Shirts", price: "$10", img: "merch-shirt", href: "https://forms.gle/TMdj5fbSSeGkXUGq8",
-      text: "Indonesia’s tropical flora and fauna, including one of our national flowers, the Rafflesia arnoldii.",
-      note: "Pickups on campus or in Downtown Berkeley." },
-    { name: "Bear x Indo Food Stickers", price: "$3", img: "", href: "https://bit.ly/bearyyummy",
-      words: ["Indomie", "Bakmi Baso", "Martabak"],
-      text: "Three of our favorite Indonesian foods, die-cut at about 2.5 by 2.5 inches. You might find a hidden “go bears” on one of them.",
-      note: "All profits go to Nusantara." }
-  ],
-
   /* Answers accept HTML. {discord} style tokens are replaced with the links above. */
   faq: [
     { q: "What is BISA?",

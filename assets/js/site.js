@@ -16,6 +16,7 @@
   const img = n => `assets/img/${n}.webp`;
   const fmt = n => Math.round(n).toLocaleString('en-US');
   if (RM) root.classList.add('rm');
+  if (window.BISA_FOOTER) window.BISA_FOOTER(); // shared footer from layout.js
 
   /* one shared frame loop */
   const tasks = [];
@@ -117,7 +118,7 @@
       </li>`).join('') + `
       <li class="person person--you" data-reveal style="--i:3">
         <div class="person__ph"><svg aria-hidden="true"><use href="#i-plus"/></svg></div>
-        <div class="person__meta"><b><a href="${esc((C.links || {}).apply || '#join')}" target="_blank" rel="noopener">You, next year?</a></b><span>Elections happen every spring</span></div>
+        <div class="person__meta"><b><a href="${esc((C.links || {}).apply || 'join.html')}" target="_blank" rel="noopener">You, next year?</a></b><span>Elections happen every spring</span></div>
       </li>`;
     const d = $('#depts');
     if (d) d.innerHTML = (C.departments || []).map(n => `<span>${esc(n)}</span>`).join('<i>/</i> ');
@@ -131,24 +132,6 @@
       });
       el.addEventListener('pointerleave', () => { ph.style.setProperty('--ry', '0deg'); ph.style.setProperty('--rx', '0deg'); });
     });
-  }
-
-  function renderMerch() {
-    const ul = $('#merch-grid');
-    if (!ul) return;
-    ul.innerHTML = (C.merch || []).map((m, i) => `
-      <li class="item" data-reveal style="--i:${i}">
-        <div class="item__ph">
-          ${m.img ? `<img src="${img(m.img)}" width="1080" height="1080" loading="lazy" alt="${esc(m.name)}">` : `<div class="item__words" aria-hidden="true">${(m.words || []).map(w => `<span>${esc(w)}</span>`).join('')}</div>`}
-          <span class="item__price">${esc(m.price)}</span>
-        </div>
-        <div class="item__body">
-          <h3>${esc(m.name)}</h3>
-          <p>${esc(m.text)}</p>
-          <p class="mono">${esc(m.note || '')}</p>
-          ${m.href ? `<a class="btn btn--sm btn--solid" href="${esc(m.href)}" target="_blank" rel="noopener">Get one now <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>` : ''}
-        </div>
-      </li>`).join('');
   }
 
   function renderFaq() {
@@ -336,12 +319,6 @@
       acc = Math.sign(vy) === Math.sign(acc) ? acc + vy : vy;
       if (acc > 60) bar.classList.add('is-hidden'); else if (acc < -30) bar.classList.remove('is-hidden');
     });
-
-    const map = new Map($$('.nav__links a').map(a => [a.getAttribute('href').slice(1), a]));
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(es => es.forEach(e => { const a = map.get(e.target.id); if (a) { if (e.isIntersecting) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); } }), { rootMargin: '-45% 0px -50% 0px' });
-      map.forEach((a, id) => { const s = document.getElementById(id); if (s) io.observe(s); });
-    }
   }
 
   /* ---------------------------------------------------------------- scroll-lit statement */
@@ -482,6 +459,6 @@
 
   /* ---------------------------------------------------------------- go */
   const safe = fn => { try { fn(); } catch (e) { console.error(e); } };
-  [renderEvents, renderTeam, renderMerch, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
+  [renderEvents, renderTeam, renderFaq, links, hero, nav, lit, strip, fit, parallax, counters, clocks, copy, magnetic, reveal].forEach(safe);
   requestAnimationFrame(frame);
 })();

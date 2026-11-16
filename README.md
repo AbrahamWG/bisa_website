@@ -19,13 +19,15 @@ Everything that changes often lives in `assets/js/content.js`:
 - `links`: intake form, Discord, Instagram, and the rest
 - `events`: newest first, add a new one at the top
 - `team`: officers, roles, and photo names
-- `departments`, `merch`, `faq`
+- `departments`, `faq`
 
 Photos go in `assets/img` as `.webp`. In `content.js` use the file name without the extension.
 
 ## Files
 
-- `index.html`: page structure and the fixed copy
+- `index.html`: home page, the island hero
+- `about.html`, `nusantara.html`, `events.html`, `team.html`, `faq.html`, `join.html`: one page per navbar item
+- `assets/js/layout.js`: the shared navbar and footer, edit them here once
 - `assets/css/site.css`: all styles, color and type tokens are at the top
 - `assets/js/site.js`: animations and interactions
 - `assets/data/shapes.js`: the 18,307 points for the island map and the logo

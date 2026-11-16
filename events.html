@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Events · BISA</title>
+<meta name="description" content="Past BISA events from 2017 to today.">
+<meta name="theme-color" content="#070b24">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="preload" href="assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/fraunces-italic.woff2" as="font" type="font/woff2" crossorigin>
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body data-page="events">
+<!-- Events page: the archive of past events with year filters and photos -->
+<script src="assets/js/layout.js"></script>
+
+<main id="top">
+
+<section class="band band--nila ev" id="events">
+  <div class="wrap">
+    <div class="ev__head">
+      <div>
+        <p class="eyebrow" data-reveal><i>Acara</i><span>Our past events</span></p>
+        <h2 class="h2" data-reveal>Every semester,<br>something to <em>show up for.</em></h2>
+      </div>
+      <div class="chips" id="ev-chips" role="group" aria-label="Filter events by year" data-reveal></div>
+    </div>
+    <ol class="ev__list" id="ev-list"></ol>
+    <p class="ev__foot mono" id="ev-foot"></p>
+  </div>
+  <div class="ev__preview" id="ev-preview" aria-hidden="true"><img alt=""></div>
+</section>
+
+<dialog class="lb" id="lb" aria-label="Event photo">
+  <figure>
+    <img id="lb-img" alt="">
+    <figcaption><span id="lb-cap"></span><span class="mono" id="lb-pos"></span></figcaption>
+  </figure>
+  <button class="lb__btn lb__prev" type="button" id="lb-prev" aria-label="Previous event"><svg aria-hidden="true"><use href="#i-down"/></svg></button>
+  <button class="lb__btn lb__next" type="button" id="lb-next" aria-label="Next event"><svg aria-hidden="true"><use href="#i-down"/></svg></button>
+  <button class="lb__btn lb__close" type="button" id="lb-close" aria-label="Close"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+</dialog>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee__row">
+    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
+    <span>Nusantara<svg><use href="#i-kawung"/></svg>Merdeka Fest<svg><use href="#i-kawung"/></svg>Fall Welcoming<svg><use href="#i-kawung"/></svg>Midautumn Festival<svg><use href="#i-kawung"/></svg>Poker Night<svg><use href="#i-kawung"/></svg>Friendsgiving Potluck<svg><use href="#i-kawung"/></svg>Halloween Amazing Race<svg><use href="#i-kawung"/></svg>Fall Retreat<svg><use href="#i-kawung"/></svg>Basketball 3x3<svg><use href="#i-kawung"/></svg></span>
+  </div>
+</div>
+
+</main>
+
+<script src="assets/js/content.js"></script>
+<script src="assets/js/site.js"></script>
+</body>
+</html>
